@@ -1,12 +1,11 @@
 import { Type } from "@sinclair/typebox";
 import { optionalStringEnum } from "openclaw/plugin-sdk";
-import type { BrightDataClient, ScrapeResult } from "../client.js";
-import type { BrightDataConfig } from "../types.js";
-import { detectPlatform } from "../types.js";
+import type { BrightDataClient } from "../client.js";
+import { executePlatformScrape, coalesce } from "./shared.js";
 
 const PROFILE_PLATFORMS = ["instagram", "facebook", "tiktok", "reddit"] as const;
 
-export function createProfileLookupTool(client: BrightDataClient, cfg: BrightDataConfig) {
+export function createProfileLookupTool(client: BrightDataClient) {
   return {
     name: "profile_lookup",
     label: "Profile Lookup",
@@ -14,39 +13,22 @@ export function createProfileLookupTool(client: BrightDataClient, cfg: BrightDat
       "Look up a social media profile (Instagram, Facebook, TikTok, Reddit) and extract follower count, bio, verification status, and engagement metrics.",
     parameters: Type.Object({
       url: Type.String({
-        description:
-          "URL of the social media profile to look up",
+        description: "URL of the social media profile to look up",
       }),
       platform: optionalStringEnum(PROFILE_PLATFORMS, {
-        description:
-          "Platform override. Auto-detected from URL if omitted.",
+        description: "Platform override. Auto-detected from URL if omitted.",
       }),
     }),
 
     async execute(_toolCallId: string, params: Record<string, unknown>) {
-      const url = String(params.url ?? "").trim();
-      if (!url) throw new Error("url is required");
+      const scraped = await executePlatformScrape(client, params, PROFILE_PLATFORMS, "profiles");
 
-      const platform =
-        (typeof params.platform === "string" ? params.platform : undefined) ??
-        detectPlatform(url);
-
-      if (!platform || !PROFILE_PLATFORMS.includes(platform as typeof PROFILE_PLATFORMS[number])) {
-        throw new Error(
-          `Could not detect platform from URL. Provide a platform parameter (${PROFILE_PLATFORMS.join(", ")}).`,
-        );
+      if (!scraped) {
+        const url = String(params.url ?? "").trim();
+        return { content: [{ type: "text" as const, text: `No profile data returned for ${url}` }] };
       }
 
-      const datasetKey = `${platform}_profiles`;
-      const results: ScrapeResult = await client.scrapeSync(datasetKey, [{ url }]);
-
-      if (!results.length) {
-        return {
-          content: [{ type: "text" as const, text: `No profile data returned for ${url}` }],
-        };
-      }
-
-      const profile = results[0] ?? {};
+      const { platform, result: profile, url } = scraped;
       const summary = formatProfileSummary(platform, profile, url);
 
       return {
@@ -64,10 +46,10 @@ function formatProfileSummary(
 ): string {
   const lines: string[] = [`## Profile Lookup`, `**Platform:** ${platform}`, `**URL:** ${url}`];
 
-  const username = profile.username ?? profile.user_name ?? profile.name;
+  const username = coalesce(profile, "username", "user_name", "name");
   if (username) lines.push(`**Username:** ${username}`);
 
-  const displayName = profile.full_name ?? profile.display_name ?? profile.name;
+  const displayName = coalesce(profile, "full_name", "display_name", "name");
   if (displayName && displayName !== username) {
     lines.push(`**Display Name:** ${displayName}`);
   }
@@ -76,20 +58,16 @@ function formatProfileSummary(
     lines.push(`**Verified:** ${profile.is_verified ? "Yes" : "No"}`);
   }
 
-  if (profile.biography || profile.bio || profile.description) {
-    lines.push(`\n**Bio:**\n${profile.biography ?? profile.bio ?? profile.description}`);
-  }
+  const bio = coalesce(profile, "biography", "bio", "description");
+  if (bio) lines.push(`\n**Bio:**\n${bio}`);
 
   const stats: string[] = [];
-  if (profile.followers != null || profile.follower_count != null) {
-    stats.push(`Followers: ${profile.followers ?? profile.follower_count}`);
-  }
-  if (profile.following != null || profile.following_count != null) {
-    stats.push(`Following: ${profile.following ?? profile.following_count}`);
-  }
-  if (profile.posts_count != null || profile.media_count != null) {
-    stats.push(`Posts: ${profile.posts_count ?? profile.media_count}`);
-  }
+  const followers = coalesce(profile, "followers", "follower_count");
+  if (followers != null) stats.push(`Followers: ${followers}`);
+  const following = coalesce(profile, "following", "following_count");
+  if (following != null) stats.push(`Following: ${following}`);
+  const posts = coalesce(profile, "posts_count", "media_count");
+  if (posts != null) stats.push(`Posts: ${posts}`);
 
   if (stats.length > 0) {
     lines.push(`\n**Stats:**\n${stats.join(" | ")}`);
@@ -99,9 +77,8 @@ function formatProfileSummary(
     lines.push(`**Engagement Rate:** ${profile.engagement_rate}`);
   }
 
-  if (profile.profile_pic_url || profile.avatar) {
-    lines.push(`**Profile Picture:** ${profile.profile_pic_url ?? profile.avatar}`);
-  }
+  const pic = coalesce(profile, "profile_pic_url", "avatar");
+  if (pic) lines.push(`**Profile Picture:** ${pic}`);
 
   return lines.join("\n");
 }

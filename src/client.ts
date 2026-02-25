@@ -10,19 +10,15 @@ const POLL_MAX_MS = 10_000;
 export type ScrapeResult = Record<string, unknown>[];
 
 export class BrightDataClient {
-  private readonly apiKey: string;
-  private readonly timeoutMs: number;
   private readonly cfg: BrightDataConfig;
 
   constructor(cfg: BrightDataConfig) {
-    this.apiKey = cfg.apiKey;
-    this.timeoutMs = cfg.timeoutMs;
     this.cfg = cfg;
   }
 
   private headers(): Record<string, string> {
     return {
-      Authorization: `Bearer ${this.apiKey}`,
+      Authorization: `Bearer ${this.cfg.apiKey}`,
       "Content-Type": "application/json",
     };
   }
@@ -37,7 +33,7 @@ export class BrightDataClient {
     const datasetId = resolveDatasetId(this.cfg, datasetKey);
     const url = `${BASE_URL}/scrape?dataset_id=${encodeURIComponent(datasetId)}&format=json`;
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    const timer = setTimeout(() => controller.abort(), this.cfg.timeoutMs);
 
     try {
       const res = await fetch(url, {

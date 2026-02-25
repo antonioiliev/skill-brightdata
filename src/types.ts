@@ -41,7 +41,7 @@ export function resolveDatasetId(
   return cfg.datasetOverrides[key] ?? DEFAULT_DATASET_IDS[key] ?? key;
 }
 
-const ALLOWED_CONFIG_KEYS = [
+const ALLOWED_CONFIG_KEYS: readonly (keyof BrightDataConfig)[] = [
   "apiKey",
   "customerId",
   "proxyZone",

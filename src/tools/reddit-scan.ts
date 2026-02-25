@@ -1,8 +1,9 @@
 import { Type } from "@sinclair/typebox";
 import type { BrightDataClient, ScrapeResult } from "../client.js";
-import type { BrightDataConfig } from "../types.js";
+import { detectPlatform } from "../types.js";
+import { coalesce } from "./shared.js";
 
-export function createRedditScanTool(client: BrightDataClient, cfg: BrightDataConfig) {
+export function createRedditScanTool(client: BrightDataClient) {
   return {
     name: "reddit_scan",
     label: "Reddit Scan",
@@ -28,7 +29,7 @@ export function createRedditScanTool(client: BrightDataClient, cfg: BrightDataCo
       const url = String(params.url ?? "").trim();
       if (!url) throw new Error("url is required");
 
-      if (!/reddit\.com/i.test(url)) {
+      if (detectPlatform(url) !== "reddit") {
         throw new Error("URL does not appear to be a Reddit link");
       }
 
@@ -36,7 +37,6 @@ export function createRedditScanTool(client: BrightDataClient, cfg: BrightDataCo
       const maxComments =
         typeof params.max_comments === "number" ? Math.floor(params.max_comments) : 20;
 
-      // Fetch the post
       const postResults: ScrapeResult = await client.scrapeSync("reddit_posts", [{ url }]);
 
       if (!postResults.length) {
@@ -46,27 +46,18 @@ export function createRedditScanTool(client: BrightDataClient, cfg: BrightDataCo
       }
 
       const post = postResults[0] ?? {};
-      const lines: string[] = [
-        `## Reddit Post Scan`,
-        `**URL:** ${url}`,
-      ];
+      const lines: string[] = [`## Reddit Post Scan`, `**URL:** ${url}`];
 
-      if (post.subreddit || post.subreddit_name) {
-        lines.push(`**Subreddit:** r/${post.subreddit ?? post.subreddit_name}`);
-      }
+      const subreddit = coalesce(post, "subreddit", "subreddit_name");
+      if (subreddit) lines.push(`**Subreddit:** r/${subreddit}`);
       if (post.author) lines.push(`**Author:** u/${post.author}`);
       if (post.title) lines.push(`**Title:** ${post.title}`);
       if (post.score != null) lines.push(`**Score:** ${post.score}`);
-      if (post.upvote_ratio != null) {
-        lines.push(`**Upvote Ratio:** ${post.upvote_ratio}`);
-      }
-      if (post.num_comments != null) {
-        lines.push(`**Comment Count:** ${post.num_comments}`);
-      }
+      if (post.upvote_ratio != null) lines.push(`**Upvote Ratio:** ${post.upvote_ratio}`);
+      if (post.num_comments != null) lines.push(`**Comment Count:** ${post.num_comments}`);
 
-      if (post.selftext || post.body) {
-        lines.push(`\n**Post Body:**\n${post.selftext ?? post.body}`);
-      }
+      const body = coalesce(post, "selftext", "body");
+      if (body) lines.push(`\n**Post Body:**\n${body}`);
 
       // Fetch comments if requested
       let comments: ScrapeResult = [];
@@ -83,11 +74,10 @@ export function createRedditScanTool(client: BrightDataClient, cfg: BrightDataCo
         lines.push(`\n### Top Comments (${topComments.length})`);
 
         for (const comment of topComments) {
-          const c = comment as Record<string, unknown>;
-          const author = c.author ?? "unknown";
-          const score = c.score != null ? ` [${c.score} pts]` : "";
-          const body = c.body ?? c.text ?? "";
-          lines.push(`\n**u/${author}**${score}\n${body}`);
+          const author = comment.author ?? "unknown";
+          const score = comment.score != null ? ` [${comment.score} pts]` : "";
+          const commentBody = coalesce(comment, "body", "text") ?? "";
+          lines.push(`\n**u/${author}**${score}\n${commentBody}`);
         }
       }
 

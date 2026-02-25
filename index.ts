@@ -11,15 +11,15 @@ export default function register(api: OpenClawPluginApi) {
   const client = new BrightDataClient(cfg);
 
   api.registerTool(
-    createSocialScanTool(client, cfg) as unknown as AnyAgentTool,
+    createSocialScanTool(client) as unknown as AnyAgentTool,
     { optional: true },
   );
   api.registerTool(
-    createProfileLookupTool(client, cfg) as unknown as AnyAgentTool,
+    createProfileLookupTool(client) as unknown as AnyAgentTool,
     { optional: true },
   );
   api.registerTool(
-    createRedditScanTool(client, cfg) as unknown as AnyAgentTool,
+    createRedditScanTool(client) as unknown as AnyAgentTool,
     { optional: true },
   );
 

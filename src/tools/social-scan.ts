@@ -1,12 +1,11 @@
 import { Type } from "@sinclair/typebox";
 import { optionalStringEnum } from "openclaw/plugin-sdk";
-import type { BrightDataClient, ScrapeResult } from "../client.js";
-import type { BrightDataConfig } from "../types.js";
-import { detectPlatform } from "../types.js";
+import type { BrightDataClient } from "../client.js";
+import { executePlatformScrape, coalesce } from "./shared.js";
 
 const SOCIAL_PLATFORMS = ["instagram", "facebook", "tiktok"] as const;
 
-export function createSocialScanTool(client: BrightDataClient, cfg: BrightDataConfig) {
+export function createSocialScanTool(client: BrightDataClient) {
   return {
     name: "social_media_scan",
     label: "Social Media Scan",
@@ -18,35 +17,19 @@ export function createSocialScanTool(client: BrightDataClient, cfg: BrightDataCo
           "URL of the social media post to scan (Instagram, Facebook, or TikTok post/reel URL)",
       }),
       platform: optionalStringEnum(SOCIAL_PLATFORMS, {
-        description:
-          "Platform override. Auto-detected from URL if omitted.",
+        description: "Platform override. Auto-detected from URL if omitted.",
       }),
     }),
 
     async execute(_toolCallId: string, params: Record<string, unknown>) {
-      const url = String(params.url ?? "").trim();
-      if (!url) throw new Error("url is required");
+      const scraped = await executePlatformScrape(client, params, SOCIAL_PLATFORMS, "posts");
 
-      const platform =
-        (typeof params.platform === "string" ? params.platform : undefined) ??
-        detectPlatform(url);
-
-      if (!platform || !SOCIAL_PLATFORMS.includes(platform as typeof SOCIAL_PLATFORMS[number])) {
-        throw new Error(
-          `Could not detect platform from URL. Provide a platform parameter (${SOCIAL_PLATFORMS.join(", ")}).`,
-        );
+      if (!scraped) {
+        const url = String(params.url ?? "").trim();
+        return { content: [{ type: "text" as const, text: `No data returned for ${url}` }] };
       }
 
-      const datasetKey = `${platform}_posts`;
-      const results: ScrapeResult = await client.scrapeSync(datasetKey, [{ url }]);
-
-      if (!results.length) {
-        return {
-          content: [{ type: "text" as const, text: `No data returned for ${url}` }],
-        };
-      }
-
-      const post = results[0] ?? {};
+      const { platform, result: post, url } = scraped;
       const summary = formatPostSummary(platform, post, url);
 
       return {
@@ -64,25 +47,20 @@ function formatPostSummary(
 ): string {
   const lines: string[] = [`## Social Media Post Scan`, `**Platform:** ${platform}`, `**URL:** ${url}`];
 
-  if (post.author_name || post.user_name || post.username) {
-    lines.push(`**Author:** ${post.author_name ?? post.user_name ?? post.username}`);
-  }
+  const author = coalesce(post, "author_name", "user_name", "username");
+  if (author) lines.push(`**Author:** ${author}`);
 
-  if (post.description || post.caption || post.text) {
-    lines.push(`\n**Caption:**\n${post.description ?? post.caption ?? post.text}`);
-  }
+  const caption = coalesce(post, "description", "caption", "text");
+  if (caption) lines.push(`\n**Caption:**\n${caption}`);
 
   const metrics: string[] = [];
   if (post.likes != null) metrics.push(`Likes: ${post.likes}`);
-  if (post.num_comments != null || post.comments != null) {
-    metrics.push(`Comments: ${post.num_comments ?? post.comments}`);
-  }
-  if (post.shares != null || post.reposts != null) {
-    metrics.push(`Shares: ${post.shares ?? post.reposts}`);
-  }
-  if (post.views != null || post.plays != null) {
-    metrics.push(`Views: ${post.views ?? post.plays}`);
-  }
+  const comments = coalesce(post, "num_comments", "comments");
+  if (comments != null) metrics.push(`Comments: ${comments}`);
+  const shares = coalesce(post, "shares", "reposts");
+  if (shares != null) metrics.push(`Shares: ${shares}`);
+  const views = coalesce(post, "views", "plays");
+  if (views != null) metrics.push(`Views: ${views}`);
 
   if (metrics.length > 0) {
     lines.push(`\n**Engagement:**\n${metrics.join(" | ")}`);
@@ -92,9 +70,8 @@ function formatPostSummary(
     lines.push(`**Hashtags:** ${post.hashtags.join(", ")}`);
   }
 
-  if (post.date || post.timestamp || post.posted_at) {
-    lines.push(`**Posted:** ${post.date ?? post.timestamp ?? post.posted_at}`);
-  }
+  const posted = coalesce(post, "date", "timestamp", "posted_at");
+  if (posted) lines.push(`**Posted:** ${posted}`);
 
   return lines.join("\n");
 }
