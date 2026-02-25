@@ -4,9 +4,16 @@
   "private": true,
   "type": "module",
   "openclaw": {
-    "extensions": ["./index.ts"]
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "scripts": {
+    "test": "vitest run"
   },
   "devDependencies": {
-    "openclaw": "*"
+    "@sinclair/typebox": "^0.34.48",
+    "openclaw": "*",
+    "vitest": "^4.0.18"
   }
 }

@@ -1,7 +1,7 @@
 {
   "id": "brightdata",
   "name": "BrightData",
-  "description": "Social media scanning and proxy sessions via BrightData API",
+  "description": "Social media scanning via BrightData API",
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
@@ -9,18 +9,6 @@
       "apiKey": {
         "type": "string",
         "description": "BrightData API key"
-      },
-      "customerId": {
-        "type": "string",
-        "description": "BrightData customer ID for proxy sessions (brd-customer-<ID>)"
-      },
-      "proxyZone": {
-        "type": "string",
-        "description": "Proxy zone name"
-      },
-      "proxyPassword": {
-        "type": "string",
-        "description": "Proxy zone password"
       },
       "timeoutMs": {
         "type": "number",
@@ -40,22 +28,6 @@
       "sensitive": true,
       "placeholder": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
       "help": "BrightData API key (or use ${BRIGHTDATA_API_KEY})"
-    },
-    "customerId": {
-      "label": "Customer ID",
-      "placeholder": "brd-customer-hl_xxxxxxxx",
-      "help": "Required for proxy sessions"
-    },
-    "proxyZone": {
-      "label": "Proxy Zone",
-      "advanced": true,
-      "placeholder": "scraping_browser1"
-    },
-    "proxyPassword": {
-      "label": "Proxy Password",
-      "sensitive": true,
-      "advanced": true,
-      "help": "Zone password for proxy authentication"
     },
     "timeoutMs": {
       "label": "Timeout (ms)",

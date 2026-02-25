@@ -1,12 +1,12 @@
 ---
 name: brightdata
-description: "Social media intelligence: scan Instagram/Facebook/TikTok posts, look up creator profiles, scan Reddit threads, proxy sessions for browser automation. Triggers on: 'scan post', 'look up profile', 'instagram', 'tiktok', 'reddit scan', 'social media', 'creator lookup', 'proxy session', 'scrape'."
+description: "Social media intelligence: scan Instagram/Facebook/TikTok posts, look up creator profiles, scan Reddit threads. Triggers on: 'scan post', 'look up profile', 'instagram', 'tiktok', 'reddit scan', 'social media', 'creator lookup', 'scrape'."
 metadata: { "openclaw": { "always": true } }
 ---
 
 # BrightData Skill
 
-Social media intelligence tools powered by the BrightData Web Scraper API. Scan posts, look up profiles, analyze Reddit threads, and get proxy credentials for browser automation.
+Social media intelligence tools powered by the BrightData Web Scraper API. Scan posts, look up profiles, and analyze Reddit threads.
 
 ## Tools
 
@@ -50,13 +50,12 @@ Scan a Reddit post and its comments.
 
 **Returns:** Post title, body, score, author, subreddit, and top N comments with scores and authors.
 
-### proxy_session
+## Agent Roles
 
-Generate BrightData proxy credentials for browser automation (Scraping Browser).
+This skill supports a delegation pattern with a dedicated `social-media` agent:
 
-**When to use:** The user needs proxy/browser session credentials for Puppeteer, Playwright, or other browser automation that requires residential/datacenter proxies.
-
-**Returns:** WebSocket URL (wss://), HTTP proxy URL, session ID. Use with Puppeteer's `browserWSEndpoint` or Playwright's proxy config.
+- **social-media agent** — Runs the tools directly. Receives a task with URL(s) and data requirements, calls the appropriate tool, and announces structured results back.
+- **main / research agents** — Delegate social media intelligence tasks to the `social-media` sub-agent instead of calling tools directly.
 
 ## When NOT to Use
 

@@ -4,7 +4,6 @@ import { BrightDataClient } from "./src/client.js";
 import { createSocialScanTool } from "./src/tools/social-scan.js";
 import { createProfileLookupTool } from "./src/tools/profile-lookup.js";
 import { createRedditScanTool } from "./src/tools/reddit-scan.js";
-import { createProxySessionTool } from "./src/tools/proxy-session.js";
 
 export default function register(api: OpenClawPluginApi) {
   const cfg = parseConfig(api.pluginConfig);
@@ -22,12 +21,4 @@ export default function register(api: OpenClawPluginApi) {
     createRedditScanTool(client) as unknown as AnyAgentTool,
     { optional: true },
   );
-
-  // Only register proxy tool if all proxy config fields are present
-  if (cfg.customerId && cfg.proxyZone && cfg.proxyPassword) {
-    api.registerTool(
-      createProxySessionTool(cfg) as unknown as AnyAgentTool,
-      { optional: true },
-    );
-  }
 }

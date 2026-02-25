@@ -1,8 +1,5 @@
 export type BrightDataConfig = {
   apiKey: string;
-  customerId?: string;
-  proxyZone?: string;
-  proxyPassword?: string;
   timeoutMs: number;
   datasetOverrides: Record<string, string>;
 };
@@ -43,9 +40,6 @@ export function resolveDatasetId(
 
 const ALLOWED_CONFIG_KEYS: readonly (keyof BrightDataConfig)[] = [
   "apiKey",
-  "customerId",
-  "proxyZone",
-  "proxyPassword",
   "timeoutMs",
   "datasetOverrides",
 ];
@@ -89,12 +83,6 @@ export function parseConfig(value: unknown): BrightDataConfig {
 
   return {
     apiKey: resolveEnvVars(cfg.apiKey),
-    customerId: typeof cfg.customerId === "string" ? cfg.customerId.trim() || undefined : undefined,
-    proxyZone: typeof cfg.proxyZone === "string" ? cfg.proxyZone.trim() || undefined : undefined,
-    proxyPassword:
-      typeof cfg.proxyPassword === "string"
-        ? resolveEnvVars(cfg.proxyPassword) || undefined
-        : undefined,
     timeoutMs,
     datasetOverrides,
   };
