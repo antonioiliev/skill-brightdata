@@ -86,6 +86,12 @@ describe("detectPlatform", () => {
     expect(detectPlatform("https://www.reddit.com/r/test/comments/abc/title/")).toBe("reddit");
   });
 
+  it("detects linkedin", () => {
+    expect(detectPlatform("https://www.linkedin.com/in/johndoe/")).toBe("linkedin");
+    expect(detectPlatform("https://www.linkedin.com/company/microsoft/")).toBe("linkedin");
+    expect(detectPlatform("https://www.linkedin.com/posts/johndoe_test-abc123")).toBe("linkedin");
+  });
+
   it("returns undefined for unknown URLs", () => {
     expect(detectPlatform("https://example.com")).toBeUndefined();
     expect(detectPlatform("https://youtube.com/watch?v=abc")).toBeUndefined();

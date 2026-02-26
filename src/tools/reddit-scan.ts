@@ -23,6 +23,12 @@ export function createRedditScanTool(client: BrightDataClient) {
           description: "Maximum number of comments to return (default: 20)",
         }),
       ),
+      days_back: Type.Optional(
+        Type.Number({
+          description:
+            "Only collect comments published within this many days. Omit for all comments.",
+        }),
+      ),
     }),
 
     async execute(_toolCallId: string, params: Record<string, unknown>) {
@@ -63,7 +69,11 @@ export function createRedditScanTool(client: BrightDataClient) {
       let comments: ScrapeResult = [];
       if (includeComments) {
         try {
-          comments = await client.scrapeSync("reddit_comments", [{ url }]);
+          const commentInput: Record<string, unknown> = { url };
+          if (typeof params.days_back === "number") {
+            commentInput.days_back = params.days_back;
+          }
+          comments = await client.scrapeSync("reddit_comments", [commentInput]);
         } catch {
           lines.push(`\n*Could not fetch comments.*`);
         }

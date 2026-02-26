@@ -3,14 +3,14 @@ import { optionalStringEnum } from "openclaw/plugin-sdk";
 import type { BrightDataClient } from "../client.js";
 import { executePlatformScrape, coalesce } from "./shared.js";
 
-const PROFILE_PLATFORMS = ["instagram", "facebook", "tiktok", "reddit"] as const;
+const PROFILE_PLATFORMS = ["instagram", "facebook", "tiktok", "reddit", "linkedin"] as const;
 
 export function createProfileLookupTool(client: BrightDataClient) {
   return {
     name: "profile_lookup",
     label: "Profile Lookup",
     description:
-      "Look up a social media profile (Instagram, Facebook, TikTok, Reddit) and extract follower count, bio, verification status, and engagement metrics.",
+      "Look up a social media profile (Instagram, Facebook, TikTok, Reddit, LinkedIn) and extract follower count, bio, verification status, and engagement metrics.",
     parameters: Type.Object({
       url: Type.String({
         description: "URL of the social media profile to look up",
